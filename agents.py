@@ -69,18 +69,18 @@ class AIAgent:
 
 def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int = 5) -> Generator[Dict, None, None]:
     """
-    Facilitate a discussion between multiple AI agents.
+    Facilitate a discussion between multiple AI agents and collect their summaries.
     
     :param agents: List of AI agents participating in the discussion
     :param initial_prompt: Starting topic or question
     :param max_turns: Maximum number of conversation turns
-    :return: Generator yielding discussion responses
+    :return: Generator yielding discussion responses and summaries
     """
     # Start with the initial prompt
     current_message = initial_prompt
     current_speaker_index = 0
 
-    # Run the discussion for specified number of turns
+    # Run the discussion for the specified number of turns
     for turn in range(max_turns):
         # Current speaking agent
         current_agent = agents[current_speaker_index]
@@ -105,6 +105,23 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
         # Update current message and speaker
         current_message = response
         current_speaker_index = (current_speaker_index + 1) % len(agents)
+
+    # After the discussion, prompt each agent for a summary
+    summaries = []
+    for agent in agents:
+        summary_prompt = (
+            "Summarize the discussion and outline what you think you need to prepare for the real meeting. "
+            "Your response should be concise and focus on your role and perspective."
+        )
+        summary = agent.generate_response(summary_prompt)
+        summaries.append({
+            'agent_name': agent.name,
+            'summary': summary
+        })
+        yield {
+            'agent_name': agent.name,
+            'summary': summary
+        }
 
 # Example usage in another file would look like this:
 def main():

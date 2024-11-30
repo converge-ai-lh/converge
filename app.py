@@ -1,13 +1,16 @@
 import os
 from slack_bolt import App
+from slack_sdk.errors import SlackApiError
 from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from leader_discussion import LeadershipDiscussionBot
 from team_member_discussion import TeamMemberDiscussionBot
+from agents import *
 from transcribe_voice_input import process_speech_bytes_to_text
 from extract_text_from_pdf import extract_text_from_pdf_url
 import re
+import glob
 
 # Load environment variables
 load_dotenv()
@@ -41,7 +44,7 @@ def handle_message_events(body, say, client):
         
                 transcript = process_speech_bytes_to_text(
                     file_type='m4a',
-                    url='https://files.slack.com/files-tmb/T08336M9URG-F0830VB3YJZ-a444ce43c3/download/audio_message_audio.mp4', # file['url_private_download'],
+                    url=file['url_private_download'],
                     headers=headers
                 )
                 text += f'{transcript} '
@@ -50,7 +53,9 @@ def handle_message_events(body, say, client):
 
     # Initialize user state if it doesn't exist
     if user_id not in user_state:
-        user_state[user_id] = {"step": None, "bot": None, "conversation": None}
+        user_info = client.users_info(user=user_id)
+        user_name = user_info["user"]["real_name"] 
+        user_state[user_id] = {"step": None, "bot": None, "conversation": None, "real_name": user_name}
 
     if user_state[user_id]['conversation'] is None:
         # Check if there's already an open conversation with the user
@@ -72,7 +77,7 @@ def handle_message_events(body, say, client):
             channel=user_state[user_id]['conversation'],
             text="Please describe the situation and decision you need help with. Include context, key concerns, and any initial thoughts.",
             thread_ts=thread_ts,
-            username="CEO Bot",
+            username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
         return
@@ -87,7 +92,7 @@ def handle_message_events(body, say, client):
             channel=user_state[user_id]['conversation'],
             text=ai_message,
             thread_ts=thread_ts,
-            username="CEO Bot",
+            username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
 
@@ -102,7 +107,7 @@ def handle_message_events(body, say, client):
             channel=user_state[user_id]['conversation'],
             text="Who do you want to include in the meting?",
             thread_ts=thread_ts,
-            username="CEO Bot",
+            username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
         return
@@ -115,37 +120,45 @@ def handle_message_events(body, say, client):
 
         report = user_state[user_id]["bot"].generate_final_report()
 
-        say("Thanks, the report was saved and shared with the team.")
+        client.chat_postMessage(
+            channel=user_state[user_id]['conversation'],
+            text="Thanks, the report was saved and shared with the team.",
+            thread_ts=thread_ts,
+            username=f"{user_state[user_id]["real_name"]} Agent",
+            icon_emoji=":robot_face:"
+        )
 
         for user in mentioned_users:
             try:
                 # DM the first mentioned user (excluding the bot)
                 target_user_id = user
-
-                print(f"Sending DM to {target_user_id}")
                 
                 # Open a direct message channel
                 dm_channel = client.conversations_open(users=[target_user_id])
-
-                print("DEBUG 1")
                 
                 # Send a DM
-                client.chat_postMessage(
-                    channel=dm_channel['channel']['id'],
-                    text=f"Hello! New meeting scheduled, your thoughts are needed! {report} What are your thoughts?",
-                    username="CEO Bot",
-                    icon_emoji=":robot_face:"
-                )
-
-                print("DEBUG 2")
+                if target_user_id == user_id:
+                    client.chat_postMessage(
+                        channel=user_state[user_id]['conversation'],
+                        text=f"Hello! New meeting scheduled, your thoughts are needed! {report} What are your thoughts?",
+                        thread_ts=thread_ts,
+                        username=f"{user_state[user_id]["real_name"]} Agent",
+                        icon_emoji=":robot_face:"
+                    )
+                else:
+                    client.chat_postMessage(
+                        channel=dm_channel['channel']['id'],
+                        text=f"Hello! New meeting scheduled, your thoughts are needed! {report} What are your thoughts?",
+                        username=f"{user_state[user_id]["real_name"]} Agent",
+                        icon_emoji=":robot_face:"
+                    )
 
                 if target_user_id not in user_state:
-                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": None}
+                    user_info = client.users_info(user=target_user_id)
+                    user_name = user_info["user"]["real_name"] 
+                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": None, "real_name": user_name}
                 user_state[target_user_id]["step"] = "initialize_discussion"
 
-                print("DEBUG 3")
-                
-                # say(f"I've sent a DM to <@{target_user_id}>")
             except Exception as e:
                 print
                 print(f"Error sending DM: {e}")
@@ -153,46 +166,116 @@ def handle_message_events(body, say, client):
         if not mentioned_users:
             say("Sorry, I couldn't find any users to share the report with.")
         else:
-            say("Thanks, the report was saved and shared with the team.")
+            client.chat_postMessage(
+                channel=user_state[user_id]['conversation'],
+                text="Thanks report saved and shared with the team.",
+                thread_ts=thread_ts,
+                username=f"{user_state[user_id]["real_name"]} Agent",
+                icon_emoji=":robot_face:"
+            )
 
         return
+    
     elif user_state[user_id]["step"] == "initialize_discussion":
         user_state[user_id]["step"] = "answer_agent_questions"
 
-        user_name = "CEO"
-
         user_state[user_id]["bot"] = TeamMemberDiscussionBot()
-        user_state[user_id]["bot"].initialize_discussion(user_name)
+        user_state[user_id]["bot"].initialize_discussion(user_state[user_id]["real_name"])
         user_state[user_id]["bot"].collect_initial_opinion(text)
 
         ai_message = user_state[user_id]["bot"].ask_clarifying_questions()
-
-        # say(ai_message)
 
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
             text=ai_message,
             thread_ts=thread_ts,
-            username="CEO Bot",
+            username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
         return
+        
     elif user_state[user_id]["step"] == "answer_agent_questions":
-        user_state[user_id]["step"] = "generate_final_report"
+        user_state[user_id]["step"] = "start_interagent_discussion"
 
         user_state[user_id]["bot"].handle_clarifying_response(text)
-
-        user_state[user_id]["bot"].generate_team_member_report()
+        print(f"User state{user_state[user_id]}")
+        user_state[user_id]["bot"].generate_team_member_report(user_state[user_id]["real_name"])
 
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
             text="Thanks for sharing your thoughts! I need to go discuss with other AI agents now!",
             thread_ts=thread_ts,
-            username="CEO Bot",
+            username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
 
+        # Check if all mentioned users are in the "start_interagent_discussion" state
+        all_ready = all(user_state[user]["step"] == "start_interagent_discussion" for user in user_state)
+        if not all_ready:
+            return
+
+        # Start the inter-agent discussion
+        agents = []
+        for user in user_state:
+            # Find the latest file for the user
+            try:
+                # Get the most recent leadership report file
+                report_files = glob.glob(f"team_member_report_{user_state[user]['real_name']}_*.txt")
+                if not report_files:
+                    raise FileNotFoundError("No leadership report found")
+                
+                latest_report = max(report_files)
+                with open(latest_report, 'r') as f:
+                    initial_context = f.read()
+            except Exception as e:
+                print(f"Error reading leadership report: {e}")
+                return
+
+            agent = AIAgent(
+                name=user_state[user]["real_name"],
+                initial_context=initial_context
+            )
+            agents.append(agent)
+
+        # create a new discussion with the bot itself
+        try:
+            result = client.conversations_create(
+                # The name of the conversation
+                name="agents_discussion",
+                is_private=False
+            )
+
+        except SlackApiError as e:
+            print("Error creating conversation: {}".format(e))
+
+        for item in start_discussion(
+                agents, 
+                initial_prompt="The issue we need to resolve is whether to bring everyone back to the office and end remote work.",
+                max_turns=6
+            ):
+
+            try:
+                if 'response' in item:
+                    # Post a message to a channel
+                    response = client.chat_postMessage(
+                        channel="agents_discussion", 
+                        text=item['response'],
+                        username=f"{item['agent_name']} Agent",
+                    )
+                elif 'summary' in item:
+                    # Send summaries to the corresponding user in DM
+                    target_user_id = next(user for user in user_state if user_state[user]["real_name"] == item['agent_name'])
+                    dm_channel = client.conversations_open(users=[target_user_id])
+                    response = client.chat_postMessage(
+                        channel=dm_channel['channel']['id'], 
+                        text=item['summary']",
+                        username=f"{item['agent_name']} Agent",
+                    )
+            except SlackApiError as e:
+                print(f"Error posting message: {e.response['error']}")
+        
         return
+    
 
 # Flask app setup for handling Slack requests
 flask_app = Flask(__name__)
@@ -202,7 +285,7 @@ handler = SlackRequestHandler(app)
 def slack_events():
     # Parse the request payload
     data = request.json
-    #print(data)
+    print(data)
 
     # Handle the Slack URL verification challenge
     if "challenge" in data:
