@@ -43,7 +43,7 @@ def handle_message_events(body, say, client):
         
                 transcript = process_speech_bytes_to_text(
                     file_type='m4a',
-                    url='https://files.slack.com/files-tmb/T08336M9URG-F0830VB3YJZ-a444ce43c3/download/audio_message_audio.mp4', # file['url_private_download'],
+                    url=file['url_private_download'],
                     headers=headers
                 )
                 text += f'{transcript} '
@@ -74,7 +74,7 @@ def handle_message_events(body, say, client):
             channel=user_state[user_id]['conversation'],
             text="Please describe the situation and decision you need help with. Include context, key concerns, and any initial thoughts.",
             thread_ts=thread_ts,
-            username="CEO Bot",
+            username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
         return
@@ -163,7 +163,13 @@ def handle_message_events(body, say, client):
         if not mentioned_users:
             say("Sorry, I couldn't find any users to share the report with.")
         else:
-            say("Thanks, the report was saved and shared with the team.")
+            client.chat_postMessage(
+                channel=user_state[user_id]['conversation'],
+                text="Thanks report saved and shared with the team.",
+                thread_ts=thread_ts,
+                username=f"{user_state[user_id]["real_name"]} Agent",
+                icon_emoji=":robot_face:"
+            )
 
         return
     
@@ -175,8 +181,6 @@ def handle_message_events(body, say, client):
         user_state[user_id]["bot"].collect_initial_opinion(text)
 
         ai_message = user_state[user_id]["bot"].ask_clarifying_questions()
-
-        # say(ai_message)
 
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
@@ -198,7 +202,7 @@ def handle_message_events(body, say, client):
             channel=user_state[user_id]['conversation'],
             text="Thanks for sharing your thoughts! I need to go discuss with other AI agents now!",
             thread_ts=thread_ts,
-            username="CEO Bot",
+            username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
 
@@ -252,9 +256,8 @@ def handle_message_events(body, say, client):
                 response = client.chat_postMessage(
                     channel="agents_discussion", 
                     text=response['response'],
-                    username=response['agent_name'],
+                    username=f"{response['agent_name']} Agent",
                 )
-                print(f"Message sent: {response['ts']}")
             except SlackApiError as e:
                 print(f"Error posting message: {e.response['error']}")
         
@@ -269,6 +272,7 @@ handler = SlackRequestHandler(app)
 def slack_events():
     # Parse the request payload
     data = request.json
+    print(data)
 
     # Handle the Slack URL verification challenge
     if "challenge" in data:
