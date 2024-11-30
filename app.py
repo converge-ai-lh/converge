@@ -4,6 +4,7 @@ from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from leader_discussion import LeadershipDiscussionBot
+from team_member_discussion import TeamMemberDiscussionBot
 import re
 
 # Load environment variables
@@ -19,42 +20,57 @@ app = App(
 # In-memory state to track ongoing conversations
 user_state = {}
 
-@app.event("app_mention")
-def handle_app_mention_events(body, say, client):
-    print("RECEIVEED MESSAGE")
+@app.event("message")
+def handle_message_events(body, say, client):
+    if "subtype" in body["event"] and body["event"]["subtype"] == "bot_message":
+        return
+
     user_id = body["event"]["user"]
     text = body["event"]["text"].lower().strip()
-    channel_id = body["event"]["channel"]
+    thread_ts = body["event"].get("thread_ts", body["event"]["ts"])
 
     # Initialize user state if it doesn't exist
     if user_id not in user_state:
-        user_state[user_id] = {"step": None, "bot": None}
+        user_state[user_id] = {"step": None, "bot": None, "conversation": None}
 
-    # Retrieve the user's current state
-    # state = user_state[user_id]
-
-    # print("DEBUGGGGG" + text)
-
-    print("STATE: " + str(user_state[user_id]))
+    if user_state[user_id]['conversation'] is None:
+        # Check if there's already an open conversation with the user
+        conversations = client.conversations_list(types="im")["channels"]
+        user_conversation = next((conv for conv in conversations if conv["user"] == user_id), None)
+        
+        if user_conversation:
+            user_state[user_id]['conversation'] = user_conversation['id']
+        else:
+            ch = client.conversations_open(users=[user_id])
+            user_state[user_id]['conversation'] = ch['channel']['id']
 
     if user_state[user_id]["step"] is None:
         user_state[user_id]["step"] = "start_conversation"
 
         user_state[user_id]["bot"] = LeadershipDiscussionBot()
         
-        say("Please describe the situation and decision you need help with. Include context, key concerns, and any initial thoughts.")
-
-        # Create 
-        # say("Sure thing! I'll schedule a meeting for you. What are the goals for the meeting?")
+        client.chat_postMessage(
+            channel=user_state[user_id]['conversation'],
+            text="Please describe the situation and decision you need help with. Include context, key concerns, and any initial thoughts.",
+            thread_ts=thread_ts,
+            username="CEO Bot",
+            icon_emoji=":robot_face:"
+        )
         return
+    
     elif user_state[user_id]["step"] == "start_conversation":
         user_state[user_id]["step"] = "ask_clarifying_questions"
 
         user_state[user_id]["bot"].collect_initial_situation(text)
 
         ai_message = user_state[user_id]["bot"].ask_clarifying_questions()
-
-        say(ai_message)
+        client.chat_postMessage(
+            channel=user_state[user_id]['conversation'],
+            text=ai_message,
+            thread_ts=thread_ts,
+            username="CEO Bot",
+            icon_emoji=":robot_face:"
+        )
 
         return
 
@@ -63,30 +79,36 @@ def handle_app_mention_events(body, say, client):
 
         user_state[user_id]["bot"].handle_clarifying_response(text)
 
-        say("Who do you want to include in the meting?", username="CEO Bot")
+        client.chat_postMessage(
+            channel=user_state[user_id]['conversation'],
+            text="Who do you want to include in the meting?",
+            thread_ts=thread_ts,
+            username="CEO Bot",
+            icon_emoji=":robot_face:"
+        )
         return
 
     elif user_state[user_id]["step"] == "generate_final_report":
-        # user_state[user_id]["step"] = None
-
         mentioned_users = re.findall(r"<@([a-zA-Z0-9]+)>", text)
-        print(mentioned_users)
-        print(text)
         # Remove the bot's own user ID from the list of mentions
         bot_user_id = client.auth_test()['user_id']
         mentioned_users = [user.strip().upper() for user in mentioned_users if user != bot_user_id] + [user_id]
 
-        print(mentioned_users)
-
         report = user_state[user_id]["bot"].generate_final_report()
+
+        say("Thanks, the report was saved and shared with the team.")
 
         for user in mentioned_users:
             try:
                 # DM the first mentioned user (excluding the bot)
                 target_user_id = user
+
+                print(f"Sending DM to {target_user_id}")
                 
                 # Open a direct message channel
                 dm_channel = client.conversations_open(users=[target_user_id])
+
+                print("DEBUG 1")
                 
                 # Send a DM
                 client.chat_postMessage(
@@ -95,12 +117,19 @@ def handle_app_mention_events(body, say, client):
                     username="CEO Bot",
                     icon_emoji=":robot_face:"
                 )
+
+                print("DEBUG 2")
+
+                if target_user_id not in user_state:
+                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": None}
+                user_state[target_user_id]["step"] = "initialize_discussion"
+
+                print("DEBUG 3")
                 
-                # Optional: Respond in the original channel
-                say(f"I've sent a DM to <@{target_user_id}>")
+                # say(f"I've sent a DM to <@{target_user_id}>")
             except Exception as e:
+                print
                 print(f"Error sending DM: {e}")
-                # say("Sorry, I couldn't send the DM.")
 
         if not mentioned_users:
             say("Sorry, I couldn't find any users to share the report with.")
@@ -108,10 +137,43 @@ def handle_app_mention_events(body, say, client):
             say("Thanks, the report was saved and shared with the team.")
 
         return
+    elif user_state[user_id]["step"] == "initialize_discussion":
+        user_state[user_id]["step"] = "answer_agent_questions"
 
-    # # Default response for unhandled cases
-    # say("I'm not sure what you're asking. Could you clarify?")
+        user_name = "CEO"
 
+        user_state[user_id]["bot"] = TeamMemberDiscussionBot()
+        user_state[user_id]["bot"].initialize_discussion(user_name)
+        user_state[user_id]["bot"].collect_initial_opinion(text)
+
+        ai_message = user_state[user_id]["bot"].ask_clarifying_questions()
+
+        # say(ai_message)
+
+        client.chat_postMessage(
+            channel=user_state[user_id]['conversation'],
+            text=ai_message,
+            thread_ts=thread_ts,
+            username="CEO Bot",
+            icon_emoji=":robot_face:"
+        )
+        return
+    elif user_state[user_id]["step"] == "answer_agent_questions":
+        user_state[user_id]["step"] = "generate_final_report"
+
+        user_state[user_id]["bot"].handle_clarifying_response(text)
+
+        user_state[user_id]["bot"].generate_team_member_report()
+
+        client.chat_postMessage(
+            channel=user_state[user_id]['conversation'],
+            text="Thanks for sharing your thoughts! I need to go discuss with other AI agents now!",
+            thread_ts=thread_ts,
+            username="CEO Bot",
+            icon_emoji=":robot_face:"
+        )
+
+        return
 
 # Flask app setup for handling Slack requests
 flask_app = Flask(__name__)
@@ -121,7 +183,7 @@ handler = SlackRequestHandler(app)
 def slack_events():
     # Parse the request payload
     data = request.json
-    print(data)
+    #print(data)
 
     # Handle the Slack URL verification challenge
     if "challenge" in data:
