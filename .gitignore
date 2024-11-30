@@ -1,2 +1,4 @@
 .env
-*.txt
+*report*.txt
+*context*.txt
+*summary*.txt
