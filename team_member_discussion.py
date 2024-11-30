@@ -43,9 +43,9 @@ class TeamMemberDiscussionBot:
             print(f"Error getting AI response: {e}")
             return None
 
-    def initialize_discussion(self) -> None:
+    def initialize_discussion(self, user_name) -> None:
         print("\n=== Team Member Discussion ===")
-        self.team_member_name = input("Please enter your name: ")
+        # self.team_member_name = input("Please enter your name: ")
         
         # Read the leadership report
         self.leadership_report = self.get_latest_leadership_report()
@@ -63,37 +63,58 @@ class TeamMemberDiscussionBot:
              Your goal is to understand their perspective deeply and create a comprehensive summary of their views."""},
         ]
 
-    def collect_initial_opinion(self) -> None:
-        print("\n=== Your Opinion ===")
-        print("Please share your thoughts and opinions about this situation.")
-        print("Feel free to express any concerns, ideas, or suggestions you have.\n")
+    def collect_initial_opinion(self, opinion) -> None:
+        # print("\n=== Your Opinion ===")
+        # print("Please share your thoughts and opinions about this situation.")
+        # print("Feel free to express any concerns, ideas, or suggestions you have.\n")
         
-        opinion = input("Your thoughts: ") + "\n\nPlease provide one clarifying question to understand better my true priotities and preferences."
-        self.conversation_history.append({"role": "user", "content": opinion})
+        # opinion = input("Your thoughts: ") + "\n\nPlease provide one clarifying question to understand better my true priotities and preferences."
+        self.conversation_history.append({"role": "user", "content": opinion + "\n\nPlease provide one clarifying question to understand better my true priotities and preferences."})
 
     def ask_clarifying_questions(self) -> None:
         print("\n=== Clarifying Discussion ===")
         
-        while True:
-            # Get AI's next question or response
-            ai_message = self.get_ai_response(self.conversation_history)
+        # while True:
+        # Get AI's next question or response
+        ai_message = self.get_ai_response(self.conversation_history)
+        
+        # if "UNDERSTANDING_COMPLETE" in ai_message:
+        #     # AI indicates it has enough information
+        #     self.conversation_history.append({"role": "assistant", "content": ai_message})
+        #     break
             
-            if "UNDERSTANDING_COMPLETE" in ai_message:
-                # AI indicates it has enough information
-                self.conversation_history.append({"role": "assistant", "content": ai_message})
-                break
-                
-            print(f"\nAI: {ai_message}")
+        # print(f"\nAI: {ai_message}")
+        
+        # # Get user's response
+        # user_response = input("\nYour response (or type 'finish' to complete): ")
+        
+        # if user_response.lower() == 'finish':
+        #     break
             
-            # Get user's response
-            user_response = input("\nYour response (or type 'finish' to complete): ")
+        # Add to conversation history
+        self.conversation_history.append({"role": "assistant", "content": ai_message})
+        return ai_message
+        # self.conversation_history.append({"role": "user", "content": user_response})
+
+    def handle_clarifying_response(self, response) -> None:
+        self.conversation_history.append({"role": "user", "content": response})
+        
+        # if "FINAL_REPORT" in ai_message:
+        #     # AI indicates it has enough information
+        #     self.conversation_history.append({"role": "assistant", "content": ai_message})
+        #     break
             
-            if user_response.lower() == 'finish':
-                break
-                
-            # Add to conversation history
-            self.conversation_history.append({"role": "assistant", "content": ai_message})
-            self.conversation_history.append({"role": "user", "content": user_response})
+        # print(f"\nAI: {ai_message}")
+        
+        # # Get user's response
+        # user_response = input("\nYour response (or type 'generate report' to finish): ")
+        
+        # if user_response.lower() == 'generate report':
+        #     break
+            
+        # # Add to conversation history
+        # self.conversation_history.append({"role": "assistant", "content": ai_message})
+        # self.conversation_history.append({"role": "user", "content": user_response})
 
     def generate_team_member_report(self) -> None:
         print("\n=== Generating Team Member Report ===")
