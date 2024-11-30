@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from leader_discussion import LeadershipDiscussionBot
 from team_member_discussion import TeamMemberDiscussionBot
 from transcribe_voice_input import process_speech_bytes_to_text
+from extract_text_from_pdf import extract_text_from_pdf_url
 import re
 
 # Load environment variables
@@ -44,6 +45,8 @@ def handle_message_events(body, say, client):
                     headers=headers
                 )
                 text += f'{transcript} '
+            elif "pdf" in file["mimetype"]:
+                text += f'{extract_text_from_pdf_url(file["url_private_download"], headers)} '
 
     # Initialize user state if it doesn't exist
     if user_id not in user_state:
