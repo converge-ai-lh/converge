@@ -5,6 +5,7 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from leader_discussion import LeadershipDiscussionBot
 from team_member_discussion import TeamMemberDiscussionBot
+from transcribe_voice_input import process_speech_bytes_to_text
 import re
 
 # Load environment variables
