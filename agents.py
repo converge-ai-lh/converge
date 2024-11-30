@@ -7,17 +7,15 @@ from typing import List, Dict, Generator
 dotenv.load_dotenv()
 
 class AIAgent:
-    def __init__(self, name: str, role: str, initial_context: str):
+    def __init__(self, name: str, initial_context: str):
         """
-        Initialize an AI agent with a name, role, and initial context.
+        Initialize an AI agent with a name, and initial context.
         
         :param name: Name of the agent
-        :param role: Specific role or perspective of the agent
         :param initial_context: Initial context or background for the agent
         """
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.name = name
-        self.role = role
         self.context = initial_context
         self.conversation_history: List[Dict] = []
 
@@ -30,7 +28,7 @@ class AIAgent:
         """
         # Combine conversation history with the agent's context
         messages = [
-            {"role": "system", "content": f"You are {self.name}, {self.role}. {self.context}. " 
+            {"role": "system", "content": f"You are {self.name}. {self.context}. " 
              "Provide a concise, complete thought in one sentence. Do not continue a previous sentence. "
              "Ensure your response is a full, grammatically complete sentence."},
         ] + [
@@ -94,7 +92,6 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
         response_dict = {
             'turn': turn,
             'agent_name': current_agent.name,
-            'agent_role': current_agent.role,
             'response': response
         }
         
@@ -116,21 +113,18 @@ def main():
         print("Error: OPENAI_API_KEY environment variable not set")
         return
 
-    # Create AI agents with different roles and contexts
+    # Create AI agents with different contexts
     agents = [
         AIAgent(
             name="CEO",
-            role="Moderate the debate",
             initial_context="We need to decide whether to bring everyone back into the office and eliminate remote work."
         ),
         AIAgent(
             name="CFO",
-            role="Favorable to in-office work",
             initial_context="I am concerned about the financial impact of remote work."
         ),
         AIAgent(
             name="CTO",
-            role="Favorable to remote work",
             initial_context="I think the technology infrastructure supports remote work well."
         )
     ]
@@ -142,7 +136,7 @@ def main():
         max_turns=6
     ):
         # Print or process each response as it's generated
-        print(f"{response['agent_name']} ({response['agent_role']}):")
+        print(f"{response['agent_name']} :")
         print(response['response'] + "\n")
 
         # You can add any additional processing here
