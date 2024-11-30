@@ -26,6 +26,21 @@ def handle_app_mention_events(body, say, client):
     text = body["event"]["text"].lower().strip()
     channel_id = body["event"]["channel"]
 
+    # Add audio transcriptions to the text
+    if 'files' in body["event"] and body["event"]["files"]:
+        for file in body["event"]["files"]:
+            if "audio" in file["mimetype"]:
+                headers = {
+                    'Authorization': f'Bearer {os.getenv("SLACK_BOT_TOKEN")}'
+                }
+        
+                transcript = process_speech_bytes_to_text(
+                    file_type='m4a',
+                    url='https://files.slack.com/files-tmb/T08336M9URG-F0830VB3YJZ-a444ce43c3/download/audio_message_audio.mp4', # file['url_private_download'],
+                    headers=headers
+                )
+                text += f'{transcript} '
+
     # Initialize user state if it doesn't exist
     if user_id not in user_state:
         user_state[user_id] = {"step": None, "bot": None}
