@@ -268,7 +268,7 @@ def handle_message_events(body, say, client):
                     dm_channel = client.conversations_open(users=[target_user_id])
                     response = client.chat_postMessage(
                         channel=dm_channel['channel']['id'], 
-                        text=item['summary']",
+                        text=item['summary'],
                         username=f"{item['agent_name']} Agent",
                     )
             except SlackApiError as e:
