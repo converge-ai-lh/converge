@@ -39,7 +39,7 @@ class LeadershipDiscussionBot:
         ]
 
     def ask_clarifying_questions(self) -> None:
-        print("\n=== Clarifying Questions ===")
+        #print("\n=== Clarifying Questions ===")
         
         # while True:
         # Get AI's next question or response
@@ -68,7 +68,7 @@ class LeadershipDiscussionBot:
             # self.conversation_history.append({"role": "user", "content": user_response})
 
     def generate_final_report(self) -> None:
-        print("\n=== Generating Final Report ===")
+        #print("\n=== Generating Final Report ===")
         
         report_prompt = {
             "role": "user",
@@ -84,8 +84,8 @@ class LeadershipDiscussionBot:
         self.conversation_history.append(report_prompt)
         report = self.get_ai_response(self.conversation_history)
         
-        print("\n=== Final Report ===")
-        print(report)
+        #print("\n=== Final Report ===")
+        #print(report)
         
         # Save report to file
         timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -94,17 +94,17 @@ class LeadershipDiscussionBot:
         with open(filename, 'w') as f:
             f.write(report)
         
-        print(f"\nReport saved to: {filename}")
+        #print(f"\nReport saved to: {filename}")
         return report
 
     def include_in_meeting(self) -> None:
-        print("\n=== Including in Meeting ===")
+        #print("\n=== Including in Meeting ===")
         
         self.conversation_history.append(report_prompt)
         report = self.get_ai_response(self.conversation_history)
         
-        print("\n=== Meeting Attendees ===")
-        print(report)
+        #print("\n=== Meeting Attendees ===")
+        #print(report)
         
         # Save report to file
         timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -113,7 +113,7 @@ class LeadershipDiscussionBot:
         with open(filename, 'w') as f:
             f.write(report)
         
-        print(f"\nMeeting attendees saved to: {filename}")
+        #print(f"\nMeeting attendees saved to: {filename}")
 
 def main():
     # Check for OpenAI API key

@@ -44,7 +44,7 @@ class TeamMemberDiscussionBot:
             return None
 
     def initialize_discussion(self, user_name) -> None:
-        print("\n=== Team Member Discussion ===")
+        #print("\n=== Team Member Discussion ===")
         # self.team_member_name = input("Please enter your name: ")
         
         # Read the leadership report
@@ -53,8 +53,8 @@ class TeamMemberDiscussionBot:
             print("Error: Cannot proceed without leadership report")
             return
 
-        print("\n=== Leadership Report ===")
-        print(self.leadership_report)
+        #print("\n=== Leadership Report ===")
+        #print(self.leadership_report)
         
         # Initialize conversation history
         self.conversation_history = [
@@ -72,7 +72,7 @@ class TeamMemberDiscussionBot:
         self.conversation_history.append({"role": "user", "content": opinion + "\n\nPlease provide one clarifying question to understand better my true priotities and preferences."})
 
     def ask_clarifying_questions(self) -> None:
-        print("\n=== Clarifying Discussion ===")
+        #print("\n=== Clarifying Discussion ===")
         
         # while True:
         # Get AI's next question or response
@@ -116,8 +116,8 @@ class TeamMemberDiscussionBot:
         # self.conversation_history.append({"role": "assistant", "content": ai_message})
         # self.conversation_history.append({"role": "user", "content": user_response})
 
-    def generate_team_member_report(self) -> None:
-        print("\n=== Generating Team Member Report ===")
+    def generate_team_member_report(self, name) -> None:
+        #print("\n=== Generating Team Member Report ===")
         
         report_prompt = {
             "role": "user",
@@ -134,14 +134,14 @@ class TeamMemberDiscussionBot:
         
         # Save individual team member report
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        filename = f"team_member_report_{self.team_member_name}_{timestamp}.txt"
+        filename = f"team_member_report_{name}_{timestamp}.txt"
         
         with open(filename, 'w') as f:
             f.write(self.team_member_report)
         
-        print("\n=== Team Member Report ===")
-        print(self.team_member_report)
-        print(f"\nReport saved to: {filename}")
+        #print("\n=== Team Member Report ===")
+        #print(self.team_member_report)
+        #print(f"\nReport saved to: {filename}")
 
         # Save conversation context for future AI agent interactions
         context_filename = f"team_member_context_{self.team_member_name}_{timestamp}.txt"
