@@ -63,7 +63,7 @@ def handle_app_mention_events(body, say, client):
 
         user_state[user_id]["bot"].handle_clarifying_response(text)
 
-        say("Who do you want to include in the meting?")
+        say("Who do you want to include in the meting?", username="CEO Bot")
         return
 
     elif user_state[user_id]["step"] == "generate_final_report":
@@ -91,7 +91,9 @@ def handle_app_mention_events(body, say, client):
                 # Send a DM
                 client.chat_postMessage(
                     channel=dm_channel['channel']['id'],
-                    text=f"Hello! New meeting scheduled, your thoughts are needed! {report} What are your thoughts?"
+                    text=f"Hello! New meeting scheduled, your thoughts are needed! {report} What are your thoughts?",
+                    username="CEO Bot",
+                    icon_emoji=":robot_face:"
                 )
                 
                 # Optional: Respond in the original channel
