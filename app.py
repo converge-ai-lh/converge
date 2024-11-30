@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from leader_discussion import LeadershipDiscussionBot
 from team_member_discussion import TeamMemberDiscussionBot
 from agents import *
+from transcribe_voice_input import process_speech_bytes_to_text
 import re
 import glob
 
@@ -31,6 +32,21 @@ def handle_message_events(body, say, client):
     user_id = body["event"]["user"]
     text = body["event"]["text"].lower().strip()
     thread_ts = body["event"].get("thread_ts", body["event"]["ts"])
+
+    # Add audio transcriptions to the text
+    if 'files' in body["event"] and body["event"]["files"]:
+        for file in body["event"]["files"]:
+            if "audio" in file["mimetype"]:
+                headers = {
+                    'Authorization': f'Bearer {os.getenv("SLACK_BOT_TOKEN")}'
+                }
+        
+                transcript = process_speech_bytes_to_text(
+                    file_type='m4a',
+                    url='https://files.slack.com/files-tmb/T08336M9URG-F0830VB3YJZ-a444ce43c3/download/audio_message_audio.mp4', # file['url_private_download'],
+                    headers=headers
+                )
+                text += f'{transcript} '
 
     # Initialize user state if it doesn't exist
     if user_id not in user_state:
