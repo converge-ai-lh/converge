@@ -31,7 +31,8 @@ class LeadershipDiscussionBot:
         # print("Please describe the situation and decision you need help with.")
         # print("Include context, key concerns, and any initial thoughts.\n")
         
-        # situation = input("Your situation: ")
+        # if situation == None:
+        #     situation = input("Your situation: ")
         
         self.conversation_history = [
             {"role": "system", "content": "You are a leadership advisor helping executives make important decisions. First understand their situation, then ask one clarifying question if needed, and finally provide a comprehensive report."},
@@ -72,13 +73,10 @@ class LeadershipDiscussionBot:
         
         report_prompt = {
             "role": "user",
-            "content": "Based on our discussion, please generate a comprehensive report that includes: "
+            "content": "Based on our discussion, please generate a short report that includes: "
                       "1. Situation Overview\n"
-                      "2. Key Stakeholders\n"
-                      "3. Main Considerations\n"
-                      "4. Potential Impacts\n"
-                      "5. Next Steps\n"
-                      "Format it professionally for sharing with team members."
+                      "2. Potential solutions\n"
+                      "Format it professionally for sharing with team members. Only include the report, no headers or footers, and don't style the text."
         }
         
         self.conversation_history.append(report_prompt)
