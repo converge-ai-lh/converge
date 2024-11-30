@@ -245,19 +245,29 @@ def handle_message_events(body, say, client):
         except SlackApiError as e:
             print("Error creating conversation: {}".format(e))
 
-        for response in start_discussion(
+        for item in start_discussion(
                 agents, 
                 initial_prompt="The issue we need to resolve is whether to bring everyone back to the office and end remote work.",
                 max_turns=6
             ):
-            
+
             try:
-                # Post a message to a channel
-                response = client.chat_postMessage(
-                    channel="agents_discussion", 
-                    text=response['response'],
-                    username=f"{response['agent_name']} Agent",
-                )
+                if 'response' in item:
+                    # Post a message to a channel
+                    response = client.chat_postMessage(
+                        channel="agents_discussion", 
+                        text=item['response'],
+                        username=f"{item['agent_name']} Agent",
+                    )
+                elif 'summary' in item:
+                    # Send summaries to the corresponding user in DM
+                    target_user_id = next(user for user in user_state if user_state[user]["real_name"] == item['agent_name'])
+                    dm_channel = client.conversations_open(users=[target_user_id])
+                    response = client.chat_postMessage(
+                        channel=dm_channel['channel']['id'], 
+                        text=item['summary']",
+                        username=f"{item['agent_name']} Agent",
+                    )
             except SlackApiError as e:
                 print(f"Error posting message: {e.response['error']}")
         
