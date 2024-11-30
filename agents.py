@@ -69,12 +69,12 @@ class AIAgent:
 
 def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int = 5) -> Generator[Dict, None, None]:
     """
-    Facilitate a discussion between multiple AI agents and collect their summaries.
+    Facilitate a discussion between multiple AI agents and collect their summaries and preparations.
     
     :param agents: List of AI agents participating in the discussion
     :param initial_prompt: Starting topic or question
     :param max_turns: Maximum number of conversation turns
-    :return: Generator yielding discussion responses and summaries
+    :return: Generator yielding discussion responses, a shared summary, and individual preparation plans.
     """
     # Start with the initial prompt
     current_message = initial_prompt
@@ -106,59 +106,28 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
         current_message = response
         current_speaker_index = (current_speaker_index + 1) % len(agents)
 
-    # After the discussion, prompt each agent for a summary
-    summaries = []
+    # After the discussion, prompt the first agent for a summary of the discussion
+    summary_prompt = (
+        "Provide a summary of the entire discussion. "
+        "This should capture the key points made by each participant and any conclusions reached."
+    )
+    shared_summary = agents[0].generate_response(summary_prompt)
+
+    # Yield the shared summary for all agents
     for agent in agents:
-        summary_prompt = (
-            "Summarize the discussion and outline what you think you need to prepare for the real meeting. "
-            "Your response should be concise and focus on your role and perspective."
-        )
-        summary = agent.generate_response(summary_prompt)
-        summaries.append({
-            'agent_name': agent.name,
-            'summary': summary
-        })
         yield {
             'agent_name': agent.name,
-            'summary': summary
+            'summary': shared_summary
         }
 
-# Example usage in another file would look like this:
-def main():
-    # Check for OpenAI API key
-    if not os.getenv('OPENAI_API_KEY'):
-        print("Error: OPENAI_API_KEY environment variable not set")
-        return
-
-    # Create AI agents with different contexts
-    agents = [
-        AIAgent(
-            name="CEO",
-            initial_context="We need to decide whether to bring everyone back into the office and eliminate remote work."
-        ),
-        AIAgent(
-            name="CFO",
-            initial_context="I am concerned about the financial impact of remote work."
-        ),
-        AIAgent(
-            name="CTO",
-            initial_context="I think the technology infrastructure supports remote work well."
+    # Ask each agent for their individual preparation plan
+    for agent in agents:
+        preparation_prompt = (
+            "Based on the discussion with the other AI agents, outline what the person you represent needs to prepare for the real meeting. "
+            "Focus on your role and what is expected from you."
         )
-    ]
-
-    # Iterate through the discussion and process responses in real-time
-    for response in start_discussion(
-        agents, 
-        initial_prompt="The issue we need to resolve is whether to bring everyone back to the office and end remote work.",
-        max_turns=6
-    ):
-        # Print or process each response as it's generated
-        print(f"{response['agent_name']} :")
-        print(response['response'] + "\n")
-
-        # You can add any additional processing here
-        # For example, you might want to save responses, 
-        # perform additional analysis, etc.
-
-if __name__ == "__main__":
-    main()
+        preparation = agent.generate_response(preparation_prompt)
+        yield {
+            'agent_name': agent.name,
+            'preparation': preparation
+        }
