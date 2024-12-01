@@ -266,7 +266,7 @@ def handle_message_events(body, say, client):
         for item in start_discussion(
                 agents, 
                 initial_prompt="The issue we need to resolve is how to handle the problematic intern. Make it a conversation as much as possible. And you can be a bit sarcastic.",
-                max_turns=6
+                max_turns=16
             ):
 
             try:
