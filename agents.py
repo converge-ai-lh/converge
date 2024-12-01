@@ -28,8 +28,8 @@ class AIAgent:
         """
         # Combine conversation history with the agent's context
         messages = [
-            {"role": "system", "content": f"You are {self.name}. {self.context}. " 
-             "Provide a concise, complete thought in one sentence. Do not continue a previous sentence. "
+            {"role": "system", "content": f"You are {self.name}. You should act exactly like the team member described here : {self.context}. " 
+             "And fight for his opinions against the other ones. Provide a concise, complete thought in one sentence. Do not continue a previous sentence. "
              "Ensure your response is a full, grammatically complete sentence."},
         ] + [
             {"role": "user" if msg['sender'] != self.name else "assistant", 
