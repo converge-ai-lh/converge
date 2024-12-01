@@ -160,11 +160,11 @@ def handle_message_events(body, say, client):
                 if target_user_id not in user_state:
                     user_info = client.users_info(user=target_user_id)
                     user_name = user_info["user"]["real_name"] 
-                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": None, "real_name": user_name}
+                    conv = dm_channel['channel']['id']
+                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": conv, "real_name": user_name}
                 user_state[target_user_id]["step"] = "initialize_discussion"
 
             except Exception as e:
-                print
                 print(f"Error sending DM: {e}")
 
         if not mentioned_users:
@@ -269,19 +269,21 @@ def handle_message_events(body, say, client):
                 elif 'summary' in item:
                     # Send summaries to the corresponding user in DM
                     target_user_id = next(user for user in user_state if user_state[user]["real_name"] == item['agent_name'])
-                    dm_channel = client.conversations_open(users=[target_user_id])
+                    #dm_channel = client.conversations_open(users=[target_user_id])
                     response = client.chat_postMessage(
-                        channel=dm_channel['channel']['id'], 
+                        channel=user_state[target_user_id]['conversation'], 
                         text=item['summary'],
+                        thread_ts=thread_ts,
                         username=f"{item['agent_name']} Agent",
                     )
                 elif 'preparation' in item:
                     # Send preparation plans to the corresponding user in DM
                     target_user_id = next(user for user in user_state if user_state[user]["real_name"] == item['agent_name'])
-                    dm_channel = client.conversations_open(users=[target_user_id])
+                    #dm_channel = client.conversations_open(users=[target_user_id])
                     response = client.chat_postMessage(
-                        channel=dm_channel['channel']['id'], 
+                        channel=user_state[target_user_id]['conversation'], 
                         text=item['preparation'],
+                        thread_ts=thread_ts,
                         username=f"{item['agent_name']} Agent",
                     )
             except SlackApiError as e:
@@ -298,7 +300,6 @@ handler = SlackRequestHandler(app)
 def slack_events():
     # Parse the request payload
     data = request.json
-    print(data)
 
     # Handle the Slack URL verification challenge
     if "challenge" in data:
