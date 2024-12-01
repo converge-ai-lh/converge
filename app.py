@@ -40,6 +40,9 @@ def handle_message_events(body, say, client):
         return
     if "subtype" in body["event"] and body["event"]["subtype"] == "message_changed":
         return
+    
+    if "event" not in body or "user" not in body["event"] or not body["event"]["user"]:
+        return
 
     #print(body["event"])
     user_id = body["event"]["user"]
@@ -125,7 +128,7 @@ def handle_message_events(body, say, client):
 
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
-            text="Who do you want to include in the meting?",
+            text="Who do you want to include in the meeting?",
             thread_ts=user_state[user_id]['thread_ts'],
             username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
