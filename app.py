@@ -49,6 +49,10 @@ def handle_message_events(body, say, client):
                 )
                 text += f'{transcript} '
             elif "pdf" in file["mimetype"]:
+                headers = {
+                    'Authorization': f'Bearer {os.getenv("SLACK_BOT_TOKEN")}'
+                }
+        
                 text += f'{extract_text_from_pdf_url(file["url_private_download"], headers)} '
 
     # Initialize user state if it doesn't exist
