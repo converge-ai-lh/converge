@@ -141,8 +141,8 @@ def handle_message_events(body, say, client):
                 # DM the first mentioned user (excluding the bot)
                 target_user_id = user
                 
-                # Open a direct message channel
-                dm_channel = client.conversations_open(users=[target_user_id])
+                # Get DM channel ID
+                dm_channel = {"channel": {"id": "D" + target_user_id}}
 
                 if target_user_id not in user_state:
                     user_info = client.users_info(user=target_user_id)
