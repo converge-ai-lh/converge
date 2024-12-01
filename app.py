@@ -59,7 +59,7 @@ def handle_message_events(body, say, client):
     if user_id not in user_state:
         user_info = client.users_info(user=user_id)
         user_name = user_info["user"]["real_name"] 
-        user_state[user_id] = {"step": None, "bot": None, "conversation": None, "real_name": user_name}
+        user_state[user_id] = {"step": None, "bot": None, "conversation": None, "real_name": user_name, "thread_ts": None}
 
     if user_state[user_id]['conversation'] is None:
         # Check if there's already an open conversation with the user
@@ -71,6 +71,9 @@ def handle_message_events(body, say, client):
         else:
             ch = client.conversations_open(users=[user_id])
             user_state[user_id]['conversation'] = ch['channel']['id']
+    
+    if user_state[user_id]['thread_ts'] is None:
+        user_state[user_id]['thread_ts'] = thread_ts
 
     if user_state[user_id]["step"] is None:
         user_state[user_id]["step"] = "start_conversation"
@@ -80,7 +83,7 @@ def handle_message_events(body, say, client):
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
             text="Please describe the situation and decision you need help with. Include context, key concerns, and any initial thoughts.",
-            thread_ts=thread_ts,
+            thread_ts=user_state[user_id]['thread_ts'],
             username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
@@ -95,7 +98,7 @@ def handle_message_events(body, say, client):
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
             text=ai_message,
-            thread_ts=thread_ts,
+            thread_ts=user_state[user_id]['thread_ts'],
             username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
@@ -110,7 +113,7 @@ def handle_message_events(body, say, client):
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
             text="Who do you want to include in the meting?",
-            thread_ts=thread_ts,
+            thread_ts=user_state[user_id]['thread_ts'],
             username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
@@ -127,7 +130,7 @@ def handle_message_events(body, say, client):
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
             text="Thanks, the report was saved and shared with the team.",
-            thread_ts=thread_ts,
+            thread_ts=user_state[user_id]['thread_ts'],
             username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
@@ -145,7 +148,7 @@ def handle_message_events(body, say, client):
                     client.chat_postMessage(
                         channel=user_state[user_id]['conversation'],
                         text=f"Hello! New meeting scheduled, your thoughts are needed! {report} What are your thoughts?",
-                        thread_ts=thread_ts,
+                        thread_ts=user_state[user_id]['thread_ts'],
                         username=f"{user_state[user_id]["real_name"]} Agent",
                         icon_emoji=":robot_face:"
                     )
@@ -153,7 +156,7 @@ def handle_message_events(body, say, client):
                     client.chat_postMessage(
                         channel=dm_channel['channel']['id'],
                         text=f"Hello! New meeting scheduled, your thoughts are needed! {report} What are your thoughts?",
-                        username=f"{user_state[user_id]["real_name"]} Agent",
+                        username=f"{user_state[target_user_id]["real_name"]} Agent",
                         icon_emoji=":robot_face:"
                     )
 
@@ -161,7 +164,7 @@ def handle_message_events(body, say, client):
                     user_info = client.users_info(user=target_user_id)
                     user_name = user_info["user"]["real_name"] 
                     conv = dm_channel['channel']['id']
-                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": conv, "real_name": user_name}
+                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": conv, "real_name": user_name, "thread_ts": None}
                 user_state[target_user_id]["step"] = "initialize_discussion"
 
             except Exception as e:
@@ -173,7 +176,7 @@ def handle_message_events(body, say, client):
             client.chat_postMessage(
                 channel=user_state[user_id]['conversation'],
                 text="Thanks report saved and shared with the team.",
-                thread_ts=thread_ts,
+                thread_ts=user_state[user_id]['thread_ts'],
                 username=f"{user_state[user_id]["real_name"]} Agent",
                 icon_emoji=":robot_face:"
             )
@@ -192,7 +195,7 @@ def handle_message_events(body, say, client):
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
             text=ai_message,
-            thread_ts=thread_ts,
+            thread_ts=user_state[user_id]['thread_ts'],
             username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
@@ -208,7 +211,7 @@ def handle_message_events(body, say, client):
         client.chat_postMessage(
             channel=user_state[user_id]['conversation'],
             text="Thanks for sharing your thoughts! I need to go discuss with other AI agents now!",
-            thread_ts=thread_ts,
+            thread_ts=user_state[user_id]['thread_ts'],
             username=f"{user_state[user_id]["real_name"]} Agent",
             icon_emoji=":robot_face:"
         )
@@ -269,11 +272,12 @@ def handle_message_events(body, say, client):
                 elif 'summary' in item:
                     # Send summaries to the corresponding user in DM
                     target_user_id = next(user for user in user_state if user_state[user]["real_name"] == item['agent_name'])
-                    #dm_channel = client.conversations_open(users=[target_user_id])
+                    # The conversation ID and thread_ts are stored in user_state when the original conversation starts
+                    # See line 71 where conversation is stored and line 83 where thread_ts is first used
                     response = client.chat_postMessage(
-                        channel=user_state[target_user_id]['conversation'], 
-                        text=item['summary'],
-                        thread_ts=thread_ts,
+                        channel=user_state[target_user_id]['conversation'],
+                        text=item['summary'], 
+                        thread_ts=user_state[target_user_id]['thread_ts'], 
                         username=f"{item['agent_name']} Agent",
                     )
                 elif 'preparation' in item:
@@ -283,7 +287,7 @@ def handle_message_events(body, say, client):
                     response = client.chat_postMessage(
                         channel=user_state[target_user_id]['conversation'], 
                         text=item['preparation'],
-                        thread_ts=thread_ts,
+                        thread_ts=user_state[target_user_id]['thread_ts'],
                         username=f"{item['agent_name']} Agent",
                     )
             except SlackApiError as e:
