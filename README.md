@@ -4,7 +4,7 @@ Converge is a Slack bot that helps facilitate better meetings by:
 - Collecting and analyzing input from team members
 - Facilitating AI-powered discussions between virtual agents representing team members
 - Generating comprehensive reports and summaries
-- Providing personalized preparation guidance
+- Providing personalized preparation guidance to individual team members
 
 ## Features
 - Voice message transcription
@@ -12,6 +12,10 @@ Converge is a Slack bot that helps facilitate better meetings by:
 - Multi-agent discussions
 - Personalized meeting preparation
 - Automated report generation
+
+## Demo
+
+Video coming soon
 
 ## Setup
 1. Install dependencies:
@@ -35,6 +39,10 @@ LLAMA_CLOUD_API_KEY=your_key
 python app.py
 ```
 
+4. Connect this Slack app to your Slack workspace
+
+TODO
+
 ## Architecture
 
 - app.py - Main Slack bot application
@@ -45,8 +53,3 @@ python app.py
 - Support utilities: 
     - transcribe_voice_input.py 
     - extract_text_from_pdf.py
-
-
-
-
-

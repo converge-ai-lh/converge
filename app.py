@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 from leader_discussion import LeadershipDiscussionBot
 from team_member_discussion import TeamMemberDiscussionBot
 from agents import *
-from transcribe_voice_input import process_speech_bytes_to_text
-from extract_text_from_pdf import extract_text_from_pdf_url
+from utils.transcribe_voice_input import process_speech_bytes_to_text
+from utils.extract_text_from_pdf import extract_text_from_pdf_url
 import re
 import glob
 
