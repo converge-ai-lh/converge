@@ -83,8 +83,8 @@ class LeadershipDiscussionBot:
         """
         report_prompt = {
             "role": "user",
-            "content": "Based on our discussion, please generate a really concise report that includes the situation overview in one sentence. \n "
-                      "Format it professionally for sharing with team members. Only include the report, no headers or footers, and don't style the text."
+            "content": "Based on our discussion, please generate the situation overview in one sentence. \n "
+                      "Format it professionally for sharing with team members. No headers or footers, and don't style the text."
         }
         
         self.conversation_history.append(report_prompt)
