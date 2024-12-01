@@ -12,21 +12,30 @@ from extract_text_from_pdf import extract_text_from_pdf_url
 import re
 import glob
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-# Initialize the Slack app with the token and signing secret
+# Initialize the Slack app with authentication tokens
 app = App(
     token=os.getenv("SLACK_BOT_TOKEN"),
     signing_secret=os.getenv("SLACK_SIGNING_SECRET")
 )
 
-
-# In-memory state to track ongoing conversations
+# Dictionary to track conversation state for each user
 user_state = {}
 
 @app.event("message")
 def handle_message_events(body, say, client):
+    """
+    Main message event handler for Slack messages.
+    Processes incoming messages, manages conversation flow, and coordinates AI agents.
+    
+    Args:
+        body: Message event payload from Slack
+        say: Function to send messages to Slack
+        client: Slack client instance
+    """
+    # Ignore bot messages to prevent loops
     if "subtype" in body["event"] and body["event"]["subtype"] == "bot_message":
         return
 
@@ -35,7 +44,7 @@ def handle_message_events(body, say, client):
     text = body["event"]["text"].lower().strip()
     thread_ts = body["event"].get("thread_ts", body["event"]["ts"])
 
-    # Add audio transcriptions to the text
+    # Process any attached audio or PDF files
     if 'files' in body["event"] and body["event"]["files"]:
         for file in body["event"]["files"]:
             if "audio" in file["mimetype"]:
@@ -56,14 +65,14 @@ def handle_message_events(body, say, client):
         
                 text += f'{extract_text_from_pdf_url(file["url_private_download"], headers)} '
 
-    # Initialize user state if it doesn't exist
+    # Initialize state for new users
     if user_id not in user_state:
         user_info = client.users_info(user=user_id)
         user_name = user_info["user"]["real_name"] 
         user_state[user_id] = {"step": None, "bot": None, "conversation": None, "real_name": user_name, "thread_ts": None}
 
+    # Get or create DM conversation with user
     if user_state[user_id]['conversation'] is None:
-        # Check if there's already an open conversation with the user
         conversations = client.conversations_list(types="im")["channels"]
         user_conversation = next((conv for conv in conversations if conv["user"] == user_id), None)
         
@@ -76,6 +85,7 @@ def handle_message_events(body, say, client):
     if user_state[user_id]['thread_ts'] is None:
         user_state[user_id]['thread_ts'] = thread_ts
 
+    # Start new conversation flow
     if user_state[user_id]["step"] is None:
         user_state[user_id]["step"] = "start_conversation"
 
@@ -121,8 +131,8 @@ def handle_message_events(body, say, client):
         return
 
     elif user_state[user_id]["step"] == "generate_final_report":
+        # Extract mentioned users and filter out the bot
         mentioned_users = re.findall(r"<@([a-zA-Z0-9]+)>", text)
-        # Remove the bot's own user ID from the list of mentions
         bot_user_id = client.auth_test()['user_id']
         mentioned_users = [user.strip().upper() for user in mentioned_users if user != bot_user_id] + [user_id]
 
@@ -136,14 +146,13 @@ def handle_message_events(body, say, client):
             icon_emoji=":robot_face:"
         )
 
+        # Share report with all mentioned users
         for user in mentioned_users:
             try:
-                # DM the first mentioned user (excluding the bot)
                 target_user_id = user
-                
-                # Get the "im" (direct message) channel ID
                 dm_channel = client.conversations_open(users=[target_user_id], return_im=True)
 
+                # Initialize state for new target users
                 if target_user_id not in user_state:
                     user_info = client.users_info(user=target_user_id)
                     user_name = user_info["user"]["real_name"] 
@@ -151,7 +160,7 @@ def handle_message_events(body, say, client):
                     user_state[target_user_id] = {"step": None, "bot": None, "conversation": conv, "real_name": user_name, "thread_ts": None}
                 user_state[target_user_id]["step"] = "initialize_discussion"
                 
-                # Send a DM
+                # Send report to original user or other team members
                 if target_user_id == user_id:
                     client.chat_postMessage(
                         channel=user_state[user_id]['conversation'],
@@ -170,17 +179,6 @@ def handle_message_events(body, say, client):
 
             except Exception as e:
                 print(f"Error sending DM: {e}")
-
-        #if not mentioned_users:
-        #    say("Sorry, I couldn't find any users to share the report with.")
-        #else:
-        #    client.chat_postMessage(
-        #        channel=user_state[user_id]['conversation'],
-        #        text="Thanks report saved and shared with the team.",
-        #        thread_ts=user_state[user_id]['thread_ts'],
-        #        username=f"{user_state[user_id]["real_name"]} Agent",
-        #        icon_emoji=":robot_face:"
-        #   )
 
         return
     
@@ -217,17 +215,15 @@ def handle_message_events(body, say, client):
             icon_emoji=":robot_face:"
         )
 
-        # Check if all mentioned users are in the "start_interagent_discussion" state
+        # Wait for all users to complete their responses
         all_ready = all(user_state[user]["step"] == "start_interagent_discussion" for user in user_state)
         if not all_ready:
             return
 
-        # Start the inter-agent discussion
+        # Initialize AI agents for discussion
         agents = []
         for user in user_state:
-            # Find the latest file for the user
             try:
-                # Get the most recent leadership report file
                 report_files = glob.glob(f"team_member_report_{user_state[user]['real_name']}_*.txt")
                 if not report_files:
                     raise FileNotFoundError("No leadership report found")
@@ -245,10 +241,9 @@ def handle_message_events(body, say, client):
             )
             agents.append(agent)
 
-        # create a new discussion with the bot itself
+        # Create discussion channel
         try:
             result = client.conversations_create(
-                # The name of the conversation
                 name="agents_discussion",
                 is_private=False
             )
@@ -256,6 +251,7 @@ def handle_message_events(body, say, client):
         except SlackApiError as e:
             print("Error creating conversation: {}".format(e))
 
+        # Run the agent discussion and send updates
         for item in start_discussion(
                 agents, 
                 initial_prompt="The issue we need to resolve is how to handle the problematic intern. Make it a conversation as much as possible. And you can be a bit sarcastic.",
@@ -264,17 +260,15 @@ def handle_message_events(body, say, client):
 
             try:
                 if 'response' in item:
-                    # Post a message to a channel
+                    # Post agent responses to discussion channel
                     response = client.chat_postMessage(
                         channel="agents_discussion", 
                         text=item['response'],
                         username=f"{item['agent_name']} Agent",
                     )
                 elif 'summary' in item:
-                    # Send summaries to the corresponding user in DM
+                    # Send discussion summaries to users
                     target_user_id = next(user for user in user_state if user_state[user]["real_name"] == item['agent_name'])
-                    # The conversation ID and thread_ts are stored in user_state when the original conversation starts
-                    # See line 71 where conversation is stored and line 83 where thread_ts is first used
                     response = client.chat_postMessage(
                         channel=user_state[target_user_id]['conversation'],
                         text=item['summary'], 
@@ -282,9 +276,8 @@ def handle_message_events(body, say, client):
                         username=f"{item['agent_name']} Agent",
                     )
                 elif 'preparation' in item:
-                    # Send preparation plans to the corresponding user in DM
+                    # Send preparation plans to users
                     target_user_id = next(user for user in user_state if user_state[user]["real_name"] == item['agent_name'])
-                    #dm_channel = client.conversations_open(users=[target_user_id])
                     response = client.chat_postMessage(
                         channel=user_state[target_user_id]['conversation'], 
                         text=item['preparation'],
@@ -303,14 +296,12 @@ handler = SlackRequestHandler(app)
 
 @flask_app.route("/", methods=["POST"])
 def slack_events():
-    # Parse the request payload
+    """Handle incoming Slack events and URL verification"""
     data = request.json
 
-    # Handle the Slack URL verification challenge
     if "challenge" in data:
         return jsonify({"challenge": data["challenge"]})
 
-    # Pass the request to Bolt handler for event processing
     return handler.handle(request)
 
 if __name__ == "__main__":

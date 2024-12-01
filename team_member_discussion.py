@@ -9,6 +9,13 @@ import dotenv
 dotenv.load_dotenv()
 
 class TeamMemberDiscussionBot:
+    """
+    A bot that facilitates discussions with team members about leadership decisions.
+    
+    This bot collects team member perspectives on leadership reports, asks clarifying
+    questions to understand their views, and generates comprehensive summaries of 
+    their feedback and suggestions.
+    """
     def __init__(self):
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.conversation_history: List[Dict] = []
@@ -32,6 +39,15 @@ class TeamMemberDiscussionBot:
             return None
 
     def get_ai_response(self, messages: List[Dict]) -> str:
+        """
+        Get a response from the OpenAI API.
+        
+        Args:
+            messages: List of conversation messages in OpenAI chat format
+            
+        Returns:
+            The AI's response text, or None if there was an error
+        """
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -44,17 +60,17 @@ class TeamMemberDiscussionBot:
             return None
 
     def initialize_discussion(self, user_name) -> None:
-        #print("\n=== Team Member Discussion ===")
-        # self.team_member_name = input("Please enter your name: ")
+        """
+        Initialize the discussion with a team member.
         
+        Args:
+            user_name: Name of the team member
+        """
         # Read the leadership report
         self.leadership_report = self.get_latest_leadership_report()
         if not self.leadership_report:
             print("Error: Cannot proceed without leadership report")
             return
-
-        #print("\n=== Leadership Report ===")
-        #print(self.leadership_report)
         
         # Initialize conversation history
         self.conversation_history = [
@@ -64,61 +80,41 @@ class TeamMemberDiscussionBot:
         ]
 
     def collect_initial_opinion(self, opinion) -> None:
-        # print("\n=== Your Opinion ===")
-        # print("Please share your thoughts and opinions about this situation.")
-        # print("Feel free to express any concerns, ideas, or suggestions you have.\n")
+        """
+        Collect the team member's initial opinion on the situation.
         
-        # opinion = input("Your thoughts: ") + "\n\nPlease provide one clarifying question to understand better my true priotities and preferences."
+        Args:
+            opinion: The team member's initial thoughts and feedback
+        """
         self.conversation_history.append({"role": "user", "content": opinion + "\n\nPlease provide one clarifying question to understand better my true priotities and preferences."})
 
     def ask_clarifying_questions(self) -> None:
-        #print("\n=== Clarifying Discussion ===")
+        """
+        Have the AI ask a clarifying question about the team member's perspective.
         
-        # while True:
-        # Get AI's next question or response
+        Returns:
+            The AI's question as a string
+        """
         ai_message = self.get_ai_response(self.conversation_history)
-        
-        # if "UNDERSTANDING_COMPLETE" in ai_message:
-        #     # AI indicates it has enough information
-        #     self.conversation_history.append({"role": "assistant", "content": ai_message})
-        #     break
-            
-        # print(f"\nAI: {ai_message}")
-        
-        # # Get user's response
-        # user_response = input("\nYour response (or type 'finish' to complete): ")
-        
-        # if user_response.lower() == 'finish':
-        #     break
-            
-        # Add to conversation history
         self.conversation_history.append({"role": "assistant", "content": ai_message})
         return ai_message
-        # self.conversation_history.append({"role": "user", "content": user_response})
 
     def handle_clarifying_response(self, response) -> None:
+        """
+        Handle the team member's response to a clarifying question.
+        
+        Args:
+            response: The team member's response text
+        """
         self.conversation_history.append({"role": "user", "content": response})
-        
-        # if "FINAL_REPORT" in ai_message:
-        #     # AI indicates it has enough information
-        #     self.conversation_history.append({"role": "assistant", "content": ai_message})
-        #     break
-            
-        # print(f"\nAI: {ai_message}")
-        
-        # # Get user's response
-        # user_response = input("\nYour response (or type 'generate report' to finish): ")
-        
-        # if user_response.lower() == 'generate report':
-        #     break
-            
-        # # Add to conversation history
-        # self.conversation_history.append({"role": "assistant", "content": ai_message})
-        # self.conversation_history.append({"role": "user", "content": user_response})
 
     def generate_team_member_report(self, name) -> None:
-        #print("\n=== Generating Team Member Report ===")
+        """
+        Generate a report summarizing the team member's perspective.
         
+        Args:
+            name: Name of the team member for the report filename
+        """
         report_prompt = {
             "role": "user",
             "content": "Based on our discussion, please generate a comprehensive summary of the team member's perspective that includes: "
@@ -138,35 +134,8 @@ class TeamMemberDiscussionBot:
         
         with open(filename, 'w') as f:
             f.write(self.team_member_report)
-        
-        #print("\n=== Team Member Report ===")
-        #print(self.team_member_report)
-        #print(f"\nReport saved to: {filename}")
 
         # Save conversation context for future AI agent interactions
         context_filename = f"team_member_context_{self.team_member_name}_{timestamp}.txt"
         with open(context_filename, 'w') as f:
             f.write(str(self.conversation_history))
-
-def main():
-    # Check for OpenAI API key
-    if not os.getenv('OPENAI_API_KEY'):
-        print("Error: OPENAI_API_KEY environment variable not set")
-        return
-
-    bot = TeamMemberDiscussionBot()
-    
-    # Step 1: Initialize discussion and show leadership report
-    bot.initialize_discussion()
-    
-    # Step 2: Collect initial opinion
-    bot.collect_initial_opinion()
-    
-    # Step 3: Ask clarifying questions
-    bot.ask_clarifying_questions()
-    
-    # Step 4: Generate and save team member report
-    bot.generate_team_member_report()
-
-if __name__ == "__main__":
-    main()

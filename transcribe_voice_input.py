@@ -11,10 +11,24 @@ client = OpenAI(
 
 def process_speech_bytes_to_text(file_type, file_bytes=None, content_type=None, lang="en", url=None, headers=None):
     """
-    Process speech to text, either from bytes or from a Slack URL
+    Process speech to text, either from bytes or from a Slack URL.
+
+    Args:
+        file_type (str): The audio file extension (e.g. 'mp3', 'wav')
+        file_bytes (bytes, optional): Raw audio file bytes
+        content_type (str, optional): MIME type of the audio file. Defaults to 'audio/mp4'
+        lang (str, optional): Language code for transcription. Defaults to 'en'
+        url (str, optional): URL to download audio file from Slack
+        headers (dict, optional): Headers required for Slack API request
+
+    Returns:
+        str: Transcribed text from the audio
+
+    Raises:
+        Exception: If Slack file download fails
+        ValueError: If neither file_bytes nor url+headers are provided
     """
     if url and headers:
-        # Download the file from Slack
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             raise Exception(f"Failed to download audio file: {response.status_code}")
@@ -30,14 +44,3 @@ def process_speech_bytes_to_text(file_type, file_bytes=None, content_type=None, 
         language=lang,
     )
     return transcript
-
-
-# if __name__ == "__main__":
-#     transcript = process_speech_bytes_to_text(
-#         file_type='m4a',
-#         url='https://files.slack.com/files-tmb/T08336M9URG-F0830VB3YJZ-a444ce43c3/audio_message_audio.mp4',
-#         headers={
-#             'Authorization': f'Bearer {os.getenv("SLACK_BOT_TOKEN")}'
-#         }
-#     )
-#     print(transcript)
