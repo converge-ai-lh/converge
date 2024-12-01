@@ -108,8 +108,7 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
 
     # Generate shared discussion summary
     summary_prompt = (
-        "Provide a concise summary of the entire discussion with the potential solutions in 3 bullet points."
-        "This should capture the key points made by each participant and any conclusions reached."
+        "Based on the discussion with the other AI agents, extract three solutions to the problem. Output them in three short bullet points."
     )
     shared_summary = agents[0].generate_response(summary_prompt)
 
@@ -123,10 +122,9 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
     # Generate individual preparation plans
     for agent in agents:
         preparation_prompt = (
-            "Based on the discussion with the other AI agents, extract the one point your owner should prepare for the real meeting."
+            "Based on the discussion with the other AI agents, extract the one point your owner should prepare for the real meeting. Output it in a short sentence."
             "Focus on your role and what is expected from you."
             "Adress yourself directly to your owner as you."
-            "Write a bullet point."
         )
         preparation = agent.generate_response(preparation_prompt)
         yield {
