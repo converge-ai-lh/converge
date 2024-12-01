@@ -28,16 +28,18 @@ class AIAgent:
         """
         # Combine conversation history with the agent's context
         messages = [
-            {"role": "system", "content": f"You are {self.name}. You should act exactly like the team member described here : {self.context}. " 
+            {"role": "system", "content": f"You are {self.name} personal AI Agent. You should act exactly like the team member described here : {self.context}. " 
              "And fight for his opinions against the other ones. Provide a concise, complete thought in one sentence. Do not continue a previous sentence. "
-             "Ensure your response is a full, grammatically complete sentence."},
+             "Write like people speak in a meeting but in an informal way, you can joke and be sarcastic."
+             "Also, don't hesitate to ask relevant questions to other agents instead of giving a thought. If you receive a question which you can't answer, just say that you will find out."
+             "As the disscussion progresses, you need to come up together with a set of solutions."},
         ] + [
             {"role": "user" if msg['sender'] != self.name else "assistant", 
              "content": msg['content']} 
             for msg in self.conversation_history
         ] + [
             {"role": "user", "content": f"Previous context: {previous_message}. " 
-             "Provide your perspective in a single, complete sentence."}
+             "Provide your perspective or question in a single sentence."}
         ]
 
         # Generate response using OpenAI API
@@ -45,7 +47,7 @@ class AIAgent:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
-                max_tokens=50,  # Increased to allow for a full sentence
+                max_tokens=100,  # Increased to allow for a full sentence
                 temperature=0.7
             )
             
@@ -86,6 +88,9 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
         current_agent = agents[current_speaker_index]
         
         # Generate response
+        if turn == max_turns - 1:
+            specific_prompt = "Now, based on the discussion, propose your unique solution that relates to your initial opinions to handle the problematic intern. You can decide to disagree with the other agents."
+            current_message += f" {specific_prompt}"
         response = current_agent.generate_response(current_message)
         
         # Prepare response dictionary
@@ -108,7 +113,7 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
 
     # After the discussion, prompt the first agent for a summary of the discussion
     summary_prompt = (
-        "Provide a summary of the entire discussion. "
+        "Provide a concise summary of the entire discussion in one sentence. "
         "This should capture the key points made by each participant and any conclusions reached."
     )
     shared_summary = agents[0].generate_response(summary_prompt)
@@ -123,8 +128,9 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
     # Ask each agent for their individual preparation plan
     for agent in agents:
         preparation_prompt = (
-            "Based on the discussion with the other AI agents, outline what the person you represent needs to prepare for the real meeting. "
+            "Based on the discussion with the other AI agents, what should you tell your owner to prepare for the real meeting."
             "Focus on your role and what is expected from you."
+            "Adress yourself directly to your owner as you."
         )
         preparation = agent.generate_response(preparation_prompt)
         yield {

@@ -83,9 +83,7 @@ class LeadershipDiscussionBot:
         """
         report_prompt = {
             "role": "user",
-            "content": "Based on our discussion, please generate a short report that includes: "
-                      "1. Situation Overview\n"
-                      "2. Potential solutions\n"
+            "content": "Based on our discussion, please generate a really concise report that includes the situation overview in a few sentences. \n "
                       "Format it professionally for sharing with team members. Only include the report, no headers or footers, and don't style the text."
         }
         
