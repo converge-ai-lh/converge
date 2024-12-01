@@ -97,17 +97,3 @@ class LeadershipDiscussionBot:
             f.write(report)
         
         return report
-
-    def include_in_meeting(self) -> None:
-        """
-        Generate a list of recommended meeting attendees based on the discussion.
-        Saves the list to a timestamped file.
-        """
-        self.conversation_history.append(report_prompt)
-        report = self.get_ai_response(self.conversation_history)
-        
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        filename = f"meeting_attendees_{timestamp}.txt"
-        
-        with open(filename, 'w') as f:
-            f.write(report)

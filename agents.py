@@ -32,7 +32,7 @@ class AIAgent:
              "And fight for his opinions against the other ones. Provide a concise, complete thought in one sentence. Do not continue a previous sentence. "
              "Write like people speak in a meeting but in an informal way, you can joke and be sarcastic."
              "Also, don't hesitate to ask relevant questions to other agents instead of giving a thought. If you receive a question which you can't answer, just say that you will find out."
-             "As the disscussion progresses, you need to come up together with a set of solutions."},
+             "As the disscussion progresses, you need to come up with what you think is the best thing to do."},
         ] + [
             {"role": "user" if msg['sender'] != self.name else "assistant", 
              "content": msg['content']} 
@@ -126,6 +126,7 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
             "Based on the discussion with the other AI agents, what should you tell your owner to prepare for the real meeting."
             "Focus on your role and what is expected from you."
             "Adress yourself directly to your owner as you."
+            "Write in bullet points."
         )
         preparation = agent.generate_response(preparation_prompt)
         yield {
