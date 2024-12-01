@@ -108,7 +108,7 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
 
     # Generate shared discussion summary
     summary_prompt = (
-        "Based on the discussion with the other AI agents, extract three directions to solve the problem. Output them in three short bullet points."
+        "Based on the discussion with the other AI agents, extract three directions to solve the problem. Output them in three very short bullet points. Do not add anything else to the output."
     )
     shared_summary = agents[0].generate_response(summary_prompt)
 
