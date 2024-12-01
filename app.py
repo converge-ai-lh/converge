@@ -30,6 +30,7 @@ def handle_message_events(body, say, client):
     if "subtype" in body["event"] and body["event"]["subtype"] == "bot_message":
         return
 
+    print(body["event"])
     user_id = body["event"]["user"]
     text = body["event"]["text"].lower().strip()
     thread_ts = body["event"].get("thread_ts", body["event"]["ts"])
@@ -142,6 +143,13 @@ def handle_message_events(body, say, client):
                 
                 # Open a direct message channel
                 dm_channel = client.conversations_open(users=[target_user_id])
+
+                if target_user_id not in user_state:
+                    user_info = client.users_info(user=target_user_id)
+                    user_name = user_info["user"]["real_name"] 
+                    conv = dm_channel['channel']['id']
+                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": conv, "real_name": user_name, "thread_ts": None}
+                user_state[target_user_id]["step"] = "initialize_discussion"
                 
                 # Send a DM
                 if target_user_id == user_id:
@@ -160,26 +168,19 @@ def handle_message_events(body, say, client):
                         icon_emoji=":robot_face:"
                     )
 
-                if target_user_id not in user_state:
-                    user_info = client.users_info(user=target_user_id)
-                    user_name = user_info["user"]["real_name"] 
-                    conv = dm_channel['channel']['id']
-                    user_state[target_user_id] = {"step": None, "bot": None, "conversation": conv, "real_name": user_name, "thread_ts": None}
-                user_state[target_user_id]["step"] = "initialize_discussion"
-
             except Exception as e:
                 print(f"Error sending DM: {e}")
 
-        if not mentioned_users:
-            say("Sorry, I couldn't find any users to share the report with.")
-        else:
-            client.chat_postMessage(
-                channel=user_state[user_id]['conversation'],
-                text="Thanks report saved and shared with the team.",
-                thread_ts=user_state[user_id]['thread_ts'],
-                username=f"{user_state[user_id]["real_name"]} Agent",
-                icon_emoji=":robot_face:"
-            )
+        #if not mentioned_users:
+        #    say("Sorry, I couldn't find any users to share the report with.")
+        #else:
+        #    client.chat_postMessage(
+        #        channel=user_state[user_id]['conversation'],
+        #        text="Thanks report saved and shared with the team.",
+        #        thread_ts=user_state[user_id]['thread_ts'],
+        #        username=f"{user_state[user_id]["real_name"]} Agent",
+        #        icon_emoji=":robot_face:"
+        #   )
 
         return
     
