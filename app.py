@@ -38,8 +38,10 @@ def handle_message_events(body, say, client):
     # Ignore bot messages to prevent loops
     if "subtype" in body["event"] and body["event"]["subtype"] == "bot_message":
         return
+    if "subtype" in body["event"] and body["event"]["subtype"] == "message_changed":
+        return
 
-    print(body["event"])
+    #print(body["event"])
     user_id = body["event"]["user"]
     text = body["event"]["text"].lower().strip()
     thread_ts = body["event"].get("thread_ts", body["event"]["ts"])
@@ -162,9 +164,15 @@ def handle_message_events(body, say, client):
                 
                 # Send report to original user or other team members
                 if target_user_id == user_id:
+                    # leader is ready to wait for the team members to respond
+                    user_state[user_id]["step"] = "start_interagent_discussion"
+
+                    # Create the report based on what he said before
+                    user_state[user_id]["bot"].generate_team_member_report(user_state[user_id]["real_name"])
+
                     client.chat_postMessage(
                         channel=user_state[user_id]['conversation'],
-                        text=f"Hello! New meeting scheduled, your thoughts are needed! {report} What are your thoughts?",
+                        text=f"Thanks for sharing your thoughts. here is the report : {report}. I'll go discuss with other AI agents now!",
                         thread_ts=user_state[user_id]['thread_ts'],
                         username=f"{user_state[user_id]["real_name"]} Agent",
                         icon_emoji=":robot_face:"
@@ -204,7 +212,7 @@ def handle_message_events(body, say, client):
         user_state[user_id]["step"] = "start_interagent_discussion"
 
         user_state[user_id]["bot"].handle_clarifying_response(text)
-        print(f"User state{user_state[user_id]}")
+        #print(f"User state{user_state[user_id]}")
         user_state[user_id]["bot"].generate_team_member_report(user_state[user_id]["real_name"])
 
         client.chat_postMessage(

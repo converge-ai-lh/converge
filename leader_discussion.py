@@ -97,3 +97,35 @@ class LeadershipDiscussionBot:
             f.write(report)
         
         return report
+    
+    def generate_team_member_report(self, name) -> None:
+        """
+        Generate a report summarizing the team member's perspective.
+        
+        Args:
+            name: Name of the team member for the report filename
+        """
+        report_prompt = {
+            "role": "user",
+            "content": "Based on our discussion, please generate a comprehensive summary of the team member's perspective that includes: "
+                      "1. Key Points and Opinions\n"
+                      "2. Main Concerns\n"
+                      "3. Suggested Solutions\n"
+                      "4. Additional Insights\n"
+                      "Format it professionally for integration with other team members' feedback."
+        }
+        
+        self.conversation_history.append(report_prompt)
+        self.team_member_report = self.get_ai_response(self.conversation_history)
+        
+        # Save individual team member report
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        filename = f"team_member_report_{name}_{timestamp}.txt"
+        
+        with open(filename, 'w') as f:
+            f.write(self.team_member_report)
+
+        # Save conversation context for future AI agent interactions
+        context_filename = f"team_member_context_{name}_{timestamp}.txt"
+        with open(context_filename, 'w') as f:
+            f.write(str(self.conversation_history))
