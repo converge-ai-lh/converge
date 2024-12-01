@@ -108,7 +108,7 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
 
     # Generate shared discussion summary
     summary_prompt = (
-        "Based on the discussion with the other AI agents, extract three solutions to the problem. Output them in three short bullet points."
+        "Based on the discussion with the other AI agents, extract three directions to solve the problem. Output them in three short bullet points."
     )
     shared_summary = agents[0].generate_response(summary_prompt)
 
@@ -116,7 +116,7 @@ def start_discussion(agents: List[AIAgent], initial_prompt: str, max_turns: int 
     for agent in agents:
         yield {
             'agent_name': agent.name,
-            'summary': shared_summary
+            'summary': f"We discussed extensively with the other AI agents and came up with the following three directions:\n{shared_summary}"
         }
 
     # Generate individual preparation plans
