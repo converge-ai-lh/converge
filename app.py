@@ -254,7 +254,7 @@ def handle_message_events(body, say, client):
 
         for item in start_discussion(
                 agents, 
-                initial_prompt="The issue we need to resolve is whether to bring everyone back to the office and end remote work.",
+                initial_prompt="The issue we need to resolve is how to handle the problematic intern. Make it a conversation as much as possible. And you can be a bit sarcastic.",
                 max_turns=6
             ):
 
@@ -273,6 +273,15 @@ def handle_message_events(body, say, client):
                     response = client.chat_postMessage(
                         channel=dm_channel['channel']['id'], 
                         text=item['summary'],
+                        username=f"{item['agent_name']} Agent",
+                    )
+                elif 'preparation' in item:
+                    # Send preparation plans to the corresponding user in DM
+                    target_user_id = next(user for user in user_state if user_state[user]["real_name"] == item['agent_name'])
+                    dm_channel = client.conversations_open(users=[target_user_id])
+                    response = client.chat_postMessage(
+                        channel=dm_channel['channel']['id'], 
+                        text=item['preparation'],
                         username=f"{item['agent_name']} Agent",
                     )
             except SlackApiError as e:
